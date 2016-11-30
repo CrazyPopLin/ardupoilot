@@ -63,6 +63,10 @@
 #define AP_SERIALMANAGER_SToRM32_BUFSIZE_RX     128
 #define AP_SERIALMANAGER_SToRM32_BUFSIZE_TX     128
 
+#define AP_SERIALMANAGER_LIDARSCANNER_BAUD          115200
+#define AP_SERIALMANAGER_LIDARSCANNER_BUFSIZE_RX    512
+#define AP_SERIALMANAGER_LIDARSCANNER_BUFSIZE_TX    128
+
 
 class AP_SerialManager {
 
@@ -82,6 +86,7 @@ public:
         SerialProtocol_Lidar = 9,
         SerialProtocol_FrSky_SPort_Passthrough = 10, // FrSky SPort Passthrough (OpenTX) protocol (X-receivers)
         SerialProtocol_Lidar360 = 11,
+        SerialProtocol_LIDARScanner = 12,
     };
 
     // Constructor

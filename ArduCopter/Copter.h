@@ -89,6 +89,7 @@
 #include <AC_InputManager/AC_InputManager.h>        // Pilot input handling library
 #include <AC_InputManager/AC_InputManager_Heli.h>   // Heli specific pilot input handling library
 #include <AP_Button/AP_Button.h>
+#include <AP_Tmxk/AP_Tmxk_LIDARScanner.h>
 
 // Configuration
 #include "defines.h"
@@ -608,6 +609,9 @@ private:
     // setup the var_info table
     AP_Param param_loader;
 
+    //TXMK Lidar Scanner library for data require
+    AP_Tmxk_LIDARScanner lidarscanner;
+
 #if FRAME_CONFIG == HELI_FRAME
     // Mode filter to reject RC Input glitches.  Filter size is 5, and it draws the 4th element, so it can reject 3 low glitches,
     // and 1 high glitch.  This is because any "off" glitches can be highly problematic for a helicopter running an ESC
@@ -650,6 +654,7 @@ private:
     void three_hz_loop();
     void one_hz_loop();
     void update_GPS(void);
+    void update_LidarScanner();
     void init_simple_bearing();
     void update_simple_mode(void);
     void update_super_simple_bearing(bool force_update);
@@ -709,6 +714,7 @@ private:
     void send_current_waypoint(mavlink_channel_t chan);
     void send_rangefinder(mavlink_channel_t chan);
     void send_rpm(mavlink_channel_t chan);
+    void send_tmxk_data(mavlink_channel_t chan);
     void rpm_update();
     void button_update();
     void init_proximity();

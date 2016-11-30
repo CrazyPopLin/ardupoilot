@@ -579,6 +579,9 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
         CHECK_PAYLOAD_SIZE(ADSB_VEHICLE);
         copter.adsb.send_adsb_vehicle(chan);
         break;
+    case MSG_TMXK_LIDARSCANNER:
+        copter.send_tmxk_data(chan);
+        break;
     }
 
     return true;
@@ -2100,4 +2103,10 @@ bool GCS_MAVLINK_Copter::accept_packet(const mavlink_status_t &status, mavlink_m
         return true;
     }
     return (msg.sysid == copter.g.sysid_my_gcs);
+}
+
+void Copter::send_tmxk_data(mavlink_channel_t chan)
+{
+
+    mavlink_msg_tmxk_lidarscanner_send(chan,lidarscanner.getObstacleAng(), 41);//lidarscanner.scan.StreamCount
 }

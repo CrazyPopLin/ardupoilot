@@ -54,6 +54,13 @@ bool Copter::auto_init(bool ignore_checks)
 //      relies on run_autopilot being called at 10hz which handles decision making and non-navigation related commands
 void Copter::auto_run()
 {
+
+    if ( !lidarscanner.getSafeFlag()  ){//&& lidarscanner.getPilotCommand()
+        set_mode(LOITER,MODE_REASON_LIDARSCANNER_UNSAFE);
+    }
+
+    //hal.console->printf("auto=%d, mode=%d\n", lidarscanner.getSafeFlag(),auto_mode);
+
     // call the correct auto controller
     switch (auto_mode) {
 
@@ -97,6 +104,7 @@ void Copter::auto_run()
 // auto_takeoff_start - initialises waypoint controller to implement take-off
 void Copter::auto_takeoff_start(const Location& dest_loc)
 {
+
     auto_mode = Auto_TakeOff;
 
     // convert location to class

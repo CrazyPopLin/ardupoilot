@@ -84,6 +84,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(rc_loop,              100,    130),
     SCHED_TASK(throttle_loop,         50,     75),
     SCHED_TASK(update_GPS,            50,    200),
+    SCHED_TASK(update_LidarScanner,   400,    200),
 #if OPTFLOW == ENABLED
     SCHED_TASK(update_optical_flow,  200,    160),
 #endif
@@ -373,6 +374,7 @@ void Copter::update_batt_compass(void)
 // should be run at 10hz
 void Copter::ten_hz_logging_loop()
 {
+    //gcs_send_message(MSG_TMXK_LIDARSCANNER);
     // log attitude data if we're not already logging at the higher rate
     if (should_log(MASK_LOG_ATTITUDE_MED) && !should_log(MASK_LOG_ATTITUDE_FAST)) {
         Log_Write_Attitude();
@@ -555,6 +557,14 @@ void Copter::update_GPS(void)
 #endif
         }
     }
+}
+
+// fifty_hz_logging_loop
+// should be run at 50hz
+void Copter::update_LidarScanner()
+{
+    lidarscanner.update();
+
 }
 
 void Copter::init_simple_bearing()

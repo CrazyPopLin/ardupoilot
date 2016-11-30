@@ -1,5 +1,6 @@
 #include "Copter.h"
 
+
 /*
  * Init and run calls for loiter flight mode
  */
@@ -33,6 +34,7 @@ bool Copter::loiter_init(bool ignore_checks)
     }else{
         return false;
     }
+
 }
 
 // loiter_run - runs the loiter controller
@@ -47,6 +49,9 @@ void Copter::loiter_run()
     // initialize vertical speed and acceleration
     pos_control.set_speed_z(-g.pilot_velocity_z_max, g.pilot_velocity_z_max);
     pos_control.set_accel_z(g.pilot_accel_z);
+
+
+
 
     // process pilot inputs unless we are in radio failsafe
     if (!failsafe.radio) {
@@ -71,6 +76,14 @@ void Copter::loiter_run()
     if (ap.land_complete_maybe) {
         wp_nav.loiter_soften_for_landing();
     }
+
+    if ( lidarscanner.getSafeFlag()  ){//&& lidarscanner.getPilotCommand()
+        set_mode(AUTO,MODE_REASON_LIDARSCANNER_SAFE);
+    }
+    else{
+        target_climb_rate = get_pilot_desired_climb_rate(783);
+    }
+    //hal.console->printf("safe=%d\n", lidarscanner.getSafeFlag());
 
 #if FRAME_CONFIG == HELI_FRAME
     // helicopters are held on the ground until rotor speed runup has finished

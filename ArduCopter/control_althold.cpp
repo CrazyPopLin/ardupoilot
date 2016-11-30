@@ -30,11 +30,14 @@ bool Copter::althold_init(bool ignore_checks)
 
     return true;
 }
-
 // althold_run - runs the althold controller
 // should be called at 100hz or more
 void Copter::althold_run()
 {
+    //if(lidarscanner.getObstaclePos() == -1){
+       //hal.console->printf("ALT: degree=%d\n", lidarscanner.getObstaclePos());
+    //}
+
     AltHoldModeState althold_state;
     float takeoff_climb_rate = 0.0f;
 

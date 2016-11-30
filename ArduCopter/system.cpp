@@ -294,6 +294,9 @@ void Copter::init_ardupilot()
 
     // flag that initialisation has completed
     ap.initialised = true;
+
+    //initialise  TMXK lidar scanner
+    lidarscanner.init();
 }
 
 
