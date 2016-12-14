@@ -55,9 +55,9 @@ bool Copter::auto_init(bool ignore_checks)
 void Copter::auto_run()
 {
 
-    if ( !lidarscanner.getSafeFlag()  ){//&& lidarscanner.getPilotCommand()
+    /*if ( !lidarscanner.getSafeFlag()  ){//&& lidarscanner.getPilotCommand()
         set_mode(LOITER,MODE_REASON_LIDARSCANNER_UNSAFE);
-    }
+    }*/
 
     //hal.console->printf("auto=%d, mode=%d\n", lidarscanner.getSafeFlag(),auto_mode);
 

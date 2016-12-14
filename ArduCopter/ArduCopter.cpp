@@ -374,7 +374,7 @@ void Copter::update_batt_compass(void)
 // should be run at 10hz
 void Copter::ten_hz_logging_loop()
 {
-    //gcs_send_message(MSG_TMXK_LIDARSCANNER);
+    gcs_send_message(MSG_TMXK_DATA);
     // log attitude data if we're not already logging at the higher rate
     if (should_log(MASK_LOG_ATTITUDE_MED) && !should_log(MASK_LOG_ATTITUDE_FAST)) {
         Log_Write_Attitude();
@@ -564,6 +564,7 @@ void Copter::update_GPS(void)
 void Copter::update_LidarScanner()
 {
     lidarscanner.update();
+    VFH.update();
 
 }
 

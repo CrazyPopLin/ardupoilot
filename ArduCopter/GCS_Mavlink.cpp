@@ -579,7 +579,7 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
         CHECK_PAYLOAD_SIZE(ADSB_VEHICLE);
         copter.adsb.send_adsb_vehicle(chan);
         break;
-    case MSG_TMXK_LIDARSCANNER:
+    case MSG_TMXK_DATA:
         copter.send_tmxk_data(chan);
         break;
     }
@@ -2107,6 +2107,6 @@ bool GCS_MAVLINK_Copter::accept_packet(const mavlink_status_t &status, mavlink_m
 
 void Copter::send_tmxk_data(mavlink_channel_t chan)
 {
-
-    mavlink_msg_tmxk_lidarscanner_send(chan,lidarscanner.getObstacleAng(), 41);//lidarscanner.scan.StreamCount
+    //send safe indicated flag; angle and range of closed obstacle in scan circle.
+    mavlink_msg_tmxk_data_send(chan,1,1, 1);
 }

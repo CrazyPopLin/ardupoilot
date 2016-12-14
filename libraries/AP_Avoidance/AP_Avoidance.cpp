@@ -120,7 +120,7 @@ AP_Avoidance::AP_Avoidance(AP_AHRS &ahrs, AP_ADSB &adsb) :
 }
 
 /*
- * Initialize variables and allocate memory for array
+ * fialize variables and allocate memory for array
  */
 void AP_Avoidance::init(void)
 {

@@ -6,11 +6,11 @@
 #include <AP_HAL/AP_HAL.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>
 #include <stdio.h>
-#include <vector>
+#include <array>
 
 #define LIDAR_STREAM 360
-#define SAFE_RANGE 200
-#define ERROR_RANGE 50
+#define UPPER 250
+#define LOWER 50
 #define RECEIVED_DATA_MAX 8 //temporary store coming lidarscanner data format for each reading
 #define RECEIVED_DATA_LEN 4// always 4 bytes, 2 bytes for angle and 2 bytes for distance
 
@@ -25,15 +25,12 @@ private:
     struct{
         int AngleArr[LIDAR_STREAM];
         int RangeArr[LIDAR_STREAM];
-        int16_t ClosedAngle = -1;
-        int16_t ClosedRange = -1;
-        uint16_t StreamCount  = 0;
-        uint16_t ErrorCount;
+        bool isObstacle[LIDAR_STREAM/2] = {};  //1: unsafe; 0:safe
+        bool available = false;
 
-        uint8_t Buff_Filter_Max = 5;
-        uint8_t Buff_Filter_Min = 0;
-        int8_t buff_filter = (Buff_Filter_Max+1)/2;//true obstacle situation
-        bool isSafe = true;
+        uint16_t StreamCount  = 0;
+        uint16_t ErrorCount = 0;
+
     }scan;
 
     bool m_pilotCommand;
@@ -68,22 +65,16 @@ public:
         Range_Error_Read =  3,
     };
 
-
-    bool getSafeFlag() const{
-        return scan.isSafe;
-    }
-
-    int16_t getObstacleAng() const{
-        return scan.ClosedAngle;
-    }
-
-    int16_t getObstacleRan() const{
-        return scan.ClosedRange;
+    bool getObstacle() const{
+        return scan.isObstacle;
     }
 
     int16_t getPilotCommand() const{
         return m_pilotCommand;
     }
+
+    int angleConver(int angle);
+
 
 };
 

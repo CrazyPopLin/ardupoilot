@@ -16,34 +16,18 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
-  AP_Tmxk_LIDARSCANNER take care of coming serial data from ardunio nano type LIDARScanner data with serial bytes.
-  This Library will be called at 400hz in ArduCopter.cpp so that no delay called in flight control loop
 
-  By Linzhao
-  System Engineer in Skywalker Innovation Technology
- */
+
 
 #include "AP_Tmxk_LIDARScanner.h"
 
+#include <../ArduCopter/Copter.h>
 #include <AP_HAL/AP_HAL.h>
 #include <RC_Channel/RC_Channel.h>
 
 extern const AP_HAL::HAL& hal;
 
 
-/*const AP_Param::GroupInfo AP_Tmxk_LIDARScanner::var_info[] PROGMEM = {
-        // @Param: STREAM
-        // @DisplayName: Set up lidar stream parameter
-        // @Description: Set up how many stream (readings) in each cycle
-        // @Range: 1 360
-        // @Units: Radians
-        // @Increment: 0.01
-        // @User: Standard
-        AP_GROUPINFO("STREAM", 1, AP_Tmxk_LIDARScanner, lidar_stream_parameter, lidar_stream_param_default),
-
-        AP_GROUPEND
-};*/
 
 AP_Tmxk_LIDARScanner::AP_Tmxk_LIDARScanner(void)
 {
@@ -83,34 +67,46 @@ void AP_Tmxk_LIDARScanner::update()
                     stream.angle = (stream.received_Byte[0] << 8 ) | (stream.received_Byte[1] & 0xff);
                     stream.range = (stream.received_Byte[2] << 8 ) | (stream.received_Byte[3] & 0xff);
                 }
-                else{
+                else if(stream.count < RECEIVED_DATA_LEN){
                     stream.error = Serial_Miss_Data;
                     //store data as previous one as angle interval is about 1 degree
                     stream.angle = scan.AngleArr[scan.StreamCount-1] +1;
                     stream.range = scan.RangeArr[scan.StreamCount-1];
                 }
-
+                else{
+                    stream.error = Serial_Miss_End;
+                }
+                //if zero position is detected then process the each scan data and clear the old one
                 if (stream.angle ==0) {
-                    doProcess();//if zero position is detected then process the each scan data and clear the old one
-                    //clear
-                    memset(scan.AngleArr, 0, LIDAR_STREAM);
-                    memset(scan.RangeArr, 0, LIDAR_STREAM);
-                    scan.StreamCount = 0;
+                   // hal.console->printf("\ncount=%d\n",  scan.StreamCount);
+                    doProcess();
                 }
                 //store each stream data to scan period
                 scan.AngleArr[scan.StreamCount] = stream.angle;
                 scan.RangeArr[scan.StreamCount] = stream.range;
-                //hal.console->printf("%d,%d,%d\n", stream.angle,stream.range, stream.count);
 
-                stream.count = 0;
-                memset(stream.received_Byte, 0, RECEIVED_DATA_MAX);
                 scan.StreamCount++;
+                if(scan.StreamCount>=LIDAR_STREAM){
+                    scan.StreamCount=LIDAR_STREAM-1;
+                }
+                memset(stream.received_Byte, 0, RECEIVED_DATA_MAX);
+                stream.count = 0;
             }
         }
         else if ( r == '<' ){
             stream.recvInProgress = true;
         }
     }
+
+    if(hal.rcout->read(11) <= 1400) {
+        Vector3f v = {0,0,0};
+        copter.guided_set_velocity(v);
+    }
+    else if(hal.rcout->read(11) > 1400 ) {
+        Vector3f v = {0,0,-1};
+        copter.guided_set_velocity(v);
+    }
+
 
     //uint32_t t2 = AP_HAL::micros();
     //hal.console->printf("t:%d\n",t2-t1);
@@ -119,47 +115,42 @@ void AP_Tmxk_LIDARScanner::update()
 //determine if some detected range of obstacle are dangerous
 void AP_Tmxk_LIDARScanner::doProcess()
 {
-    int closest = SAFE_RANGE;
-    int flag = -1;// indicate safe
+
+    int angle;
     scan.ErrorCount = 0;
 
+    memset(scan.isObstacle, 0, LIDAR_STREAM/2);
+    scan.available = false;
+
     //check if safe or not for each circle
-    for(int i =0; i < scan.StreamCount; i++ ){
-        if ( (scan.AngleArr[i] >= 180 && scan.AngleArr[i] <= 360) && (scan.RangeArr[i] < SAFE_RANGE && scan.RangeArr[i] > ERROR_RANGE ) && scan.RangeArr[i] < closest){
-            closest = scan.RangeArr[i];
-            flag = i;
+   for(int i =0; i < scan.StreamCount; i++ ){
+
+        angle = angleConver(scan.AngleArr[i]);//return 0-180 degree if angle is 180-360; else return -1
+
+        if      ( angle != -1 && scan.RangeArr[i] <  UPPER && scan.RangeArr[i] >  LOWER ){//angle from 0-180, found obstacle from LOWER to UPPER
+            scan.isObstacle[angle] = true;
         }
+        else if ( angle != -1 && scan.RangeArr[i] <= LOWER && scan.RangeArr[i] >= UPPER ) {
+            scan.isObstacle[angle] = false;
+        }
+
         if (scan.RangeArr[i] <= 1 || scan.RangeArr[i] >= 4000 ){
             scan.ErrorCount++;//record amount of error data in each circle
         }
     }
+    scan.available = true;
 
-    //filter error data in case make copter oscillation
-    if (flag != -1){
-         scan.ClosedAngle = scan.AngleArr[flag];
-         scan.ClosedRange = scan.RangeArr[flag];
-
-         scan.buff_filter = (scan.buff_filter+1 >= scan.Buff_Filter_Max) ? scan.Buff_Filter_Max : scan.buff_filter+1;
-    }
-    else{
-         scan.ClosedAngle = -1;
-         scan.ClosedRange = -1;
-
-         scan.buff_filter = (scan.buff_filter-1 >= scan.Buff_Filter_Min) ? scan.buff_filter-1 : scan.Buff_Filter_Min;
-    }
-    //hal.console->printf("ang=%d, rng=%d, filter=%d\n",scan.ClosedAngle,scan.ClosedRange, scan.buff_filter);
-
-    //send the closest angle in each circle to gcs for monitoring
-    //hal.rcin->set_override(5,scan.ClosedAngle);
-
-    //determine final safety depend on filtered value
-    if( scan.buff_filter >= (scan.Buff_Filter_Max+1)/2 ){
-        scan.isSafe = false;
-    }
-    else{
-        scan.isSafe = true;
-    }
+    //clear scan struct data
+    memset(scan.AngleArr, 0, LIDAR_STREAM);
+    memset(scan.RangeArr, 0, LIDAR_STREAM);
+    scan.StreamCount = 0;
 
 }
+
+int AP_Tmxk_LIDARScanner::angleConver(int _angle)
+{
+    return (_angle -180 >= 0 ) ? _angle-180 : -1;
+}
+
 
 

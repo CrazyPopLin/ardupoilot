@@ -90,6 +90,7 @@
 #include <AC_InputManager/AC_InputManager_Heli.h>   // Heli specific pilot input handling library
 #include <AP_Button/AP_Button.h>
 #include <AP_Tmxk/AP_Tmxk_LIDARScanner.h>
+#include <AP_Tmxk/AP_Tmxk_VFH.h>
 
 // Configuration
 #include "defines.h"
@@ -136,6 +137,7 @@ public:
     friend class Parameters;
     friend class ParametersG2;
     friend class AP_Avoidance_Copter;
+    friend class AP_Tmxk_LIDARScanner;
 #if ADVANCED_FAILSAFE == ENABLED
     friend class AP_AdvancedFailsafe_Copter;
 #endif
@@ -612,6 +614,10 @@ private:
     //TXMK Lidar Scanner library for data require
     AP_Tmxk_LIDARScanner lidarscanner;
 
+    //TMXK VFH controller for 2D obstacle avoidance
+    AP_Tmxk_VFH VFH;
+
+
 #if FRAME_CONFIG == HELI_FRAME
     // Mode filter to reject RC Input glitches.  Filter size is 5, and it draws the 4th element, so it can reject 3 low glitches,
     // and 1 high glitch.  This is because any "off" glitches can be highly problematic for a helicopter running an ESC
@@ -840,6 +846,7 @@ private:
     void autotune_updating_p_up_d_down(float &tune_d, float tune_d_min, float tune_d_step_ratio, float &tune_p, float tune_p_min, float tune_p_max, float tune_p_step_ratio, float target, float measurement_min, float measurement_max);
     void autotune_twitching_measure_acceleration(float &rate_of_change, float rate_measurement, float &rate_measurement_max);
     void avoidance_adsb_update(void);
+    void avoidance_FVH_update(void);
 #if ADVANCED_FAILSAFE == ENABLED
     void afs_fs_check(void);
 #endif
