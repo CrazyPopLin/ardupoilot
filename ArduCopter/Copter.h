@@ -137,7 +137,7 @@ public:
     friend class Parameters;
     friend class ParametersG2;
     friend class AP_Avoidance_Copter;
-    friend class AP_Tmxk_LIDARScanner;
+    friend class AP_Tmxk_VFH;
 #if ADVANCED_FAILSAFE == ENABLED
     friend class AP_AdvancedFailsafe_Copter;
 #endif
@@ -615,7 +615,7 @@ private:
     AP_Tmxk_LIDARScanner lidarscanner;
 
     //TMXK VFH controller for 2D obstacle avoidance
-    AP_Tmxk_VFH VFH;
+    AP_Tmxk_VFH VFH{lidarscanner,mission, inertial_nav,ahrs};
 
 
 #if FRAME_CONFIG == HELI_FRAME
@@ -661,6 +661,7 @@ private:
     void one_hz_loop();
     void update_GPS(void);
     void update_LidarScanner();
+    void update_VFH();
     void init_simple_bearing();
     void update_simple_mode(void);
     void update_super_simple_bearing(bool force_update);

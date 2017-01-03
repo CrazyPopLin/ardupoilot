@@ -900,6 +900,10 @@ const AP_Param::Info Copter::var_info[] = {
     // @Path: ../libraries/AP_ADSB/AP_ADSB.cpp
     GOBJECT(adsb,                "ADSB_", AP_ADSB),
 
+    // @GROUP: Tmxk_VFH
+    // @Path: ../libraries/AP_Tmxk/AP_Tmxk_VFH.cpp
+   // GOBJECT(VFH,"VFH_", AP_Tmxk_VFH),
+
     // @Group: AVD_
     // @Path: ../libraries/AP_Avoidance/AP_Avoidance.cpp
     GOBJECT(avoidance_adsb, "AVD_", AP_Avoidance_Copter),

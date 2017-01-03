@@ -204,6 +204,7 @@ void AP_SerialManager::init()
                     state[i].uart->begin(map_baudrate(state[i].baud),
                                          AP_SERIALMANAGER_LIDARSCANNER_BUFSIZE_RX,
                                          AP_SERIALMANAGER_LIDARSCANNER_BUFSIZE_TX);
+                    //hal.console->printf("\naaaaaaa=%d\n",map_baudrate(state[i].baud));
                     break;
 
             }

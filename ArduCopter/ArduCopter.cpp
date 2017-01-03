@@ -84,7 +84,8 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(rc_loop,              100,    130),
     SCHED_TASK(throttle_loop,         50,     75),
     SCHED_TASK(update_GPS,            50,    200),
-    SCHED_TASK(update_LidarScanner,   400,    200),
+    SCHED_TASK(update_LidarScanner,   25,    200),
+    SCHED_TASK(update_VFH,            100,    200),
 #if OPTFLOW == ENABLED
     SCHED_TASK(update_optical_flow,  200,    160),
 #endif
@@ -294,6 +295,7 @@ void Copter::fast_loop()
     if (should_log(MASK_LOG_ANY)) {
         Log_Sensor_Health();
     }
+
 }
 
 // rc_loops - reads user input from transmitter/receiver
@@ -304,6 +306,7 @@ void Copter::rc_loop()
     // -----------------------------------------
     read_radio();
     read_control_switch();
+
 }
 
 // throttle_loop - should be run at 50 hz
@@ -559,13 +562,15 @@ void Copter::update_GPS(void)
     }
 }
 
-// fifty_hz_logging_loop
-// should be run at 50hz
+
 void Copter::update_LidarScanner()
 {
     lidarscanner.update();
-    VFH.update();
+}
 
+void Copter::update_VFH()
+{
+    VFH.update();
 }
 
 void Copter::init_simple_bearing()

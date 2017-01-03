@@ -10,9 +10,11 @@
 
 #define LIDAR_STREAM 360
 #define UPPER 250
-#define LOWER 50
-#define RECEIVED_DATA_MAX 8 //temporary store coming lidarscanner data format for each reading
-#define RECEIVED_DATA_LEN 4// always 4 bytes, 2 bytes for angle and 2 bytes for distance
+#define LOWER 100
+#define RECEIVED_BYTE_MAX 5 //temporary store coming lidarscanner data format for each reading
+#define RECEIVED_BYTE_LEN 4// always 4 bytes, 2 bytes for angle and 2 bytes for distance
+#define UPDATE_OBSTACLE_MAX 9//有几种情况误差就是累加到几？？1）角度偏移，2）角度没有测量到，3）
+#define UPDATE_OBSTACLE_MIN 0
 
 //#define lidar_stream_param_default 100
 
@@ -25,7 +27,7 @@ private:
     struct{
         int AngleArr[LIDAR_STREAM];
         int RangeArr[LIDAR_STREAM];
-        bool isObstacle[LIDAR_STREAM/2] = {};  //1: unsafe; 0:safe
+        bool isObstacle[LIDAR_STREAM/2+1] = {};  //1: unsafe; 0:safe;both 1 and 180 degree are accessible
         bool available = false;
 
         uint16_t StreamCount  = 0;
@@ -38,7 +40,7 @@ private:
     //AP_Int16 lidar_stream_parameter;              /// parameter about to setup lidar streams
 
     struct{
-        char received_Byte[RECEIVED_DATA_MAX];
+        char received_Byte[RECEIVED_BYTE_MAX];
         uint8_t count = 0;
         uint8_t error = 0;
         bool recvInProgress =false;
@@ -47,7 +49,13 @@ private:
         uint16_t range = 0;
     }stream;
 
+    uint32_t monitor_time=0;
 
+    bool isScannerWork = true;
+
+    bool isSafe = true;
+
+    uint8_t buff_filter = UPDATE_OBSTACLE_MIN ;
 public:
 
     AP_Tmxk_LIDARScanner();
@@ -56,7 +64,7 @@ public:
 
     void update();
 
-    void doProcess();
+    void checkObstacle();
 
     enum Data_Error_Type{
         No_Error_Type    =  0,
@@ -65,16 +73,18 @@ public:
         Range_Error_Read =  3,
     };
 
-    bool getObstacle() const{
-        return scan.isObstacle;
-    }
+    //get obstacle info into the reference array from AP_VFH class, and update to the max 5 at same time
+    bool getObstacle(uint8_t (&array)[LIDAR_STREAM/2+1]);
 
-    int16_t getPilotCommand() const{
-        return m_pilotCommand;
-    }
+    bool ScanAvailable() const { return scan.available; }
 
-    int angleConver(int angle);
+    bool LidarScannerAvailable() const { return isScannerWork; }
 
+    int16_t getPilotCommand() const { return m_pilotCommand; }
+
+    int angleTranfer(int _angle) { return (_angle  >= 180 && _angle <=360 ) ? _angle-180 : -1; }
+
+    bool checkSafe() const { return isSafe; }
 
 };
 

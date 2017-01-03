@@ -21,7 +21,6 @@
 
 #include "AP_Tmxk_LIDARScanner.h"
 
-#include <../ArduCopter/Copter.h>
 #include <AP_HAL/AP_HAL.h>
 #include <RC_Channel/RC_Channel.h>
 
@@ -41,18 +40,20 @@ void AP_Tmxk_LIDARScanner::init()
 
 void AP_Tmxk_LIDARScanner::update()
 {
-    //uint32_t t1 =AP_HAL::micros();
-
     while(hal.uartE->available()){
-         //Decode from stream loop and get angle and range
+        /****Monitor if lidarscanner works for VFH invoking****/
+        monitor_time = AP_HAL::micros();
+        isScannerWork = true;
+
+         /****Decode from stream loop and get angle and range****/
         int r = hal.uartE->read();
 
         if (stream.recvInProgress == true){
             if (r != '>') {
                 stream.received_Byte[stream.count] = r;
                 stream.count++;
-                if (stream.count >= RECEIVED_DATA_MAX) {
-                    stream.count = RECEIVED_DATA_MAX - 1;
+                if (stream.count >= RECEIVED_BYTE_MAX) {
+                    stream.count = RECEIVED_BYTE_MAX - 1;
                 }
             }
             else {
@@ -60,14 +61,14 @@ void AP_Tmxk_LIDARScanner::update()
                 stream.recvInProgress = false;
 
                 // check if data is miss in this stream loop
-                if(stream.count == RECEIVED_DATA_LEN)
+                if(stream.count == RECEIVED_BYTE_LEN)
                 {
                     stream.error = No_Error_Type;
                     //convert highbyte and low byte into 16byte int
                     stream.angle = (stream.received_Byte[0] << 8 ) | (stream.received_Byte[1] & 0xff);
                     stream.range = (stream.received_Byte[2] << 8 ) | (stream.received_Byte[3] & 0xff);
                 }
-                else if(stream.count < RECEIVED_DATA_LEN){
+                else if(stream.count < RECEIVED_BYTE_LEN){
                     stream.error = Serial_Miss_Data;
                     //store data as previous one as angle interval is about 1 degree
                     stream.angle = scan.AngleArr[scan.StreamCount-1] +1;
@@ -75,21 +76,28 @@ void AP_Tmxk_LIDARScanner::update()
                 }
                 else{
                     stream.error = Serial_Miss_End;
+                    //convert first 4 byte into angle and range, then left the miss parts??
+                    stream.angle = (stream.received_Byte[0] << 8 ) | (stream.received_Byte[1] & 0xff);
+                    stream.range = (stream.received_Byte[2] << 8 ) | (stream.received_Byte[3] & 0xff);
                 }
+
                 //if zero position is detected then process the each scan data and clear the old one
                 if (stream.angle ==0) {
-                   // hal.console->printf("\ncount=%d\n",  scan.StreamCount);
-                    doProcess();
+                    scan.available = false;
+                    checkObstacle();
+                    scan.available = true;      //means new scan data is available
                 }
+
                 //store each stream data to scan period
                 scan.AngleArr[scan.StreamCount] = stream.angle;
                 scan.RangeArr[scan.StreamCount] = stream.range;
+                //hal.console->printf("%d,%d,%d\n",stream.angle,stream.range,scan.StreamCount);//LS RUN 400HZ, the output which changes at every scan
 
                 scan.StreamCount++;
                 if(scan.StreamCount>=LIDAR_STREAM){
                     scan.StreamCount=LIDAR_STREAM-1;
                 }
-                memset(stream.received_Byte, 0, RECEIVED_DATA_MAX);
+                memset(stream.received_Byte, 0, RECEIVED_BYTE_MAX);
                 stream.count = 0;
             }
         }
@@ -98,58 +106,78 @@ void AP_Tmxk_LIDARScanner::update()
         }
     }
 
-    if(hal.rcout->read(11) <= 1400) {
-        Vector3f v = {0,0,0};
-        copter.guided_set_velocity(v);
-    }
-    else if(hal.rcout->read(11) > 1400 ) {
-        Vector3f v = {0,0,-1};
-        copter.guided_set_velocity(v);
-    }
-
-
-    //uint32_t t2 = AP_HAL::micros();
-    //hal.console->printf("t:%d\n",t2-t1);
+    if (AP_HAL::micros()- monitor_time > 1000000)
+        isScannerWork = false;
 }
 
 //determine if some detected range of obstacle are dangerous
-void AP_Tmxk_LIDARScanner::doProcess()
+void AP_Tmxk_LIDARScanner::checkObstacle()
 {
-
-    int angle;
     scan.ErrorCount = 0;
-
-    memset(scan.isObstacle, 0, LIDAR_STREAM/2);
-    scan.available = false;
+    memset(scan.isObstacle, 0, LIDAR_STREAM/2+1);
+    bool flag =false;
 
     //check if safe or not for each circle
-   for(int i =0; i < scan.StreamCount; i++ ){
+    int tranfered_angle;
+    for(int i =0; i < scan.StreamCount; i++ ){
 
-        angle = angleConver(scan.AngleArr[i]);//return 0-180 degree if angle is 180-360; else return -1
+        tranfered_angle = angleTranfer(scan.AngleArr[i]);//return 0-180 degree if angle is 180-360; else return -1;some angle missed because lidarscanner not stable
 
-        if      ( angle != -1 && scan.RangeArr[i] <  UPPER && scan.RangeArr[i] >  LOWER ){//angle from 0-180, found obstacle from LOWER to UPPER
-            scan.isObstacle[angle] = true;
+        if      ( tranfered_angle != -1 && scan.RangeArr[i] <  UPPER && scan.RangeArr[i] >  LOWER ){//angle from 0-180, found obstacle from LOWER to UPPER
+            scan.isObstacle[tranfered_angle] = true;
+            flag = true;
         }
-        else if ( angle != -1 && scan.RangeArr[i] <= LOWER && scan.RangeArr[i] >= UPPER ) {
-            scan.isObstacle[angle] = false;
-        }
+
+       //if(tranfered_angle != -1)
+           // hal.console->printf("%d,%d,%d\n",tranfered_angle,scan.RangeArr[i],flag);
 
         if (scan.RangeArr[i] <= 1 || scan.RangeArr[i] >= 4000 ){
             scan.ErrorCount++;//record amount of error data in each circle
         }
     }
-    scan.available = true;
+
+   //flag indicated ture: if any angle found obstacle
+    if(flag){
+        buff_filter = (buff_filter+1 >= UPDATE_OBSTACLE_MAX) ? UPDATE_OBSTACLE_MAX : buff_filter+1;// value always not greater than UPDATE_OBSTACLE_MAX
+    }
+    else{
+        buff_filter= (buff_filter-1 >= UPDATE_OBSTACLE_MIN) ? buff_filter-1 : UPDATE_OBSTACLE_MIN;//value always not less than UPDATE_OBSTACLE_MIN
+    }
+
+    if( buff_filter >= 2 ){
+        isSafe = false;
+    }
+    else{
+        isSafe = true;
+    }
+    //hal.console->printf("\n%d\n",buff_filter);
 
     //clear scan struct data
     memset(scan.AngleArr, 0, LIDAR_STREAM);
     memset(scan.RangeArr, 0, LIDAR_STREAM);
     scan.StreamCount = 0;
-
 }
 
-int AP_Tmxk_LIDARScanner::angleConver(int _angle)
+/* The process update rare lidarscanner data to estimation of obstacle data, which will update 1 if found obstacle in this sector (each 1 degree) ;
+ * @Param: reference of sector array (defined in AP_Tmxk_VFH.h)
+ *
+ * @return:
+ *  1:true: if finished this process for future determined.
+ *  2:estimation value of obstacle
+ *
+ */
+bool AP_Tmxk_LIDARScanner::getObstacle(uint8_t (&array)[LIDAR_STREAM/2+1])//uint8_t (&array)[LIDAR_STREAM/2+1]
 {
-    return (_angle -180 >= 0 ) ? _angle-180 : -1;
+    for(int i=0; i<=LIDAR_STREAM/2; i++){
+        //hal.console->printf("%d,%d\n",i,scan.isObstacle[i]);
+        if(scan.isObstacle[i]){
+            array[i] = (array[i]+1 >= UPDATE_OBSTACLE_MAX) ? UPDATE_OBSTACLE_MAX : array[i]+1;// value always not greater than UPDATE_OBSTACLE_MAX
+        }
+        else{
+            array[i] = (array[i]-1 >= UPDATE_OBSTACLE_MIN) ? array[i]-1 : UPDATE_OBSTACLE_MIN;//value always not less than UPDATE_OBSTACLE_MIN
+        }
+    }
+    return true;
 }
 
 

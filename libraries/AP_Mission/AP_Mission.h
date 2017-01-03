@@ -350,6 +350,12 @@ public:
     /// get_current_nav_cmd - returns the current "navigation" command
     const Mission_Command& get_current_nav_cmd() const { return _nav_cmd; }
 
+    ///get_current_nav_cmd_location - return the current "navigation" command's location
+    bool get_current_nav_cmd_location(struct Location &loc) const {
+        loc= _nav_cmd.content.location;
+        return true;
+    }
+
     /// get_current_nav_index - returns the current "navigation" command index
     /// Note that this will return 0 if there is no command. This is
     /// used in MAVLink reporting of the mission command

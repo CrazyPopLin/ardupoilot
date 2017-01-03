@@ -160,6 +160,13 @@ public:
         k_param_single_servo_4,         // 78 - remove
 
         //
+        //79: VFH
+        //
+       // k_param_VFH = 79,
+
+
+
+        //
         // 80: Heli
         //
         k_param_heli_servo_1 = 80,  // remove

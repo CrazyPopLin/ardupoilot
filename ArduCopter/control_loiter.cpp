@@ -77,13 +77,13 @@ void Copter::loiter_run()
         wp_nav.loiter_soften_for_landing();
     }
 
-    /*if ( lidarscanner.getSafeFlag()   ){//&& lidarscanner.getPilotCommand()
+    if ( lidarscanner.checkSafe()   ){//&& lidarscanner.getPilotCommand()
         set_mode(AUTO,MODE_REASON_LIDARSCANNER_SAFE);
     }
     else{
         target_climb_rate = get_pilot_desired_climb_rate(783);
-    }*/
-    //hal.console->printf("safe=%d\n", lidarscanner.getSafeFlag());
+    }
+    //hal.console->printf("safe=%d\n", lidarscanner.checkSafe());
 
 #if FRAME_CONFIG == HELI_FRAME
     // helicopters are held on the ground until rotor speed runup has finished
